@@ -225,6 +225,23 @@ function initAdmin() {
       localStorage.setItem("encToken", token);
     }
 
+
+     async function fetchResults(url) {
+  try {
+    const res = await fetch(url);
+    const txt = await res.text();
+    if (!txt.includes("google.visualization")) {
+      throw new Error("Invalid Google Sheet link or access blocked.");
+    }
+    return parseGviz(txt).table.rows.map(r => r.c.map(c => (c && c.v) || ""));
+  } catch (err) {
+    console.error("Error fetching Google Sheet:", err);
+    alert("⚠️ Unable to load results. Check if the Google Sheet is public.");
+    return [];
+  }
+}
+
+
     const decrypted = decryptToken(token);
     try {
       await updateGithubFile(globalData, decrypted);
