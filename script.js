@@ -3,13 +3,8 @@ const GITHUB_USER = "Chaithanyakumarmandula";
 const GITHUB_REPO = "alietresultsportal";
 const GITHUB_BRANCH = "main";
 const GITHUB_FILE_PATH = "data.json";
-const GITHUB_RAW_URL = `const GITHUB_USER = "yourusername";
-const GITHUB_REPO = "alietresultsportal";
-const GITHUB_BRANCH = "main";
-const GITHUB_FILE_PATH = "data.json";
 
-// Use this rawcdn link (supports CORS on Netlify)
-const GITHUB_RAW_URL = `https://rawcdn.githack.com/Chaithanyamandula/alietresultsportal/refs/heads/main/data.json`;
+const GITHUB_RAW_URL = `https://raw.githubusercontent.com/Chaithanyamandula/alietresultsportal/refs/heads/main/data.json`;
 
 /* ---------- THEME ---------- */
 function applyTheme(theme){document.body.classList.remove('light','dark');document.body.classList.add(theme);localStorage.setItem('theme',theme);}
