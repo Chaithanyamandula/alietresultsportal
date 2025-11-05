@@ -1,0 +1,12 @@
+{
+  "flashNews": "📢 Welcome! Semester 5 Results Released!",
+  "sheets": {
+    "regular": ["", "", "", "", "", "", "", ""],
+    "supplementary": ["", "", "", "", "", "", "", ""],
+    "revaluation": ["", "", "", "", "", "", "", ""]
+  },
+  "admin": {
+    "username": "admin",
+    "password": "password123"
+  }
+}
