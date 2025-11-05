@@ -1,9 +1,36 @@
 {
   "flashNews": "📢 Welcome! Semester 5 Results Released!",
   "sheets": {
-    "regular": ["", "", "", "", "", "", "", ""],
-    "supplementary": ["", "", "", "", "", "", "", ""],
-    "revaluation": ["", "", "", "", "", "", "", ""]
+    "regular": [
+      "",
+      "",
+      "",
+      "https://docs.google.com/spreadsheets/d/1jzly2_RnC8Gz7yYpMB333iHDiMvRMFiM9MR89oCyVjE/gviz/tq?tqx=out:json&gid=1616234087",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "supplementary": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "revaluation": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
   },
   "admin": {
     "username": "admin",
