@@ -7,7 +7,7 @@
 /* ---------- CONFIG ---------- */
 const GITHUB_USER = "Chaithanyamandula";
 const GITHUB_REPO = "alietresultsportal";
-const GITHUB_BRANCH = "main";
+const GITHUB_BRANCH = "master";
 const GITHUB_FILE_PATH = "data.json";
 
 // ✅ Use CORS-safe GitHack URL for Netlify hosting
