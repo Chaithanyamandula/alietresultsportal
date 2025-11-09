@@ -1,49 +1,53 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Panel - Results Portal</title>
-<link rel="stylesheet" href="style.css">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="nav">
-    <div class="logo">🔧 Admin Dashboard</div>
-    <a href="index.html" class="admin-btn">Home</a>
+    <div class="brand">
+      <img src="images.jpg" class="logo">
+      <div>
+        <div class="college-name">Admin Dashboard</div>
+        <div class="subtext">Manage Results</div>
+      </div>
+    </div>
+    <div>
+      <!-- <button id="themeToggle" class="theme-toggle">🌓</button> -->
+      <a href="index.html" class="admin-btn">Portal</a>
+    </div>
   </header>
 
-  <main>
-    <div class="card">
-      <h2>Flash News</h2>
-      <input id="flashNewsInput" placeholder="Enter flash news text (e.g., Sem 5 Results Released)">
-      <button id="saveFlashBtn">Update Flash News</button>
+  <main class="container">
+    <div id="loginCard" class="card">
+      <h2>Admin Login</h2>
+      <input id="adminUser" placeholder="Username">
+      <input id="adminPass" type="password" placeholder="Password">
+      <button id="loginBtn" class="primary">Login</button>
+      <p id="loginMsg" class="msg"></p>
     </div>
 
-    <div class="card">
-      <h2>Google Sheet Links</h2>
-      <select id="typeSelect">
-        <option value="regular">Regular</option>
-        <option value="supply">Supplementary</option>
-      </select>
-      <select id="semSelect">
-        <option value="1">Semester 1</option>
-        <option value="2">Semester 2</option>
-        <option value="3">Semester 3</option>
-        <option value="4">Semester 4</option>
-        <option value="5">Semester 5</option>
-        <option value="6">Semester 6</option>
-        <option value="7">Semester 7</option>
-        <option value="8">Semester 8</option>
-      </select>
-      <input id="sheetLink" placeholder="Paste Google Sheet JSON Link">
-      <button id="saveLinkBtn">Save Link</button>
+    <div id="adminPanel" class="hidden">
+      <div class="card">
+        <h2>Flash News</h2>
+        <input id="newsText" placeholder="e.g., Semester 5 Results Released!">
+        <button id="saveNews" class="secondary">Update News</button>
+      </div>
+
+      <div class="card">
+        <h2>Google Sheets Links</h2>
+        <div id="linkInputs"></div>
+        <button id="saveLinks" class="primary">Save All Changes</button>
+        <p id="saveMsg" class="msg"></p>
+      </div>
     </div>
   </main>
 
-  <footer class="footer">© 2025 Admin Panel</footer>
-
+  <footer class="footer">&copy; 2025 Admin</footer>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
