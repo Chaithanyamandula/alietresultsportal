@@ -1,48 +1,67 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>College Results Portal</title>
-<link rel="stylesheet" href="style.css">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>College Results Portal</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="nav">
-    <div class="logo">🎓 College Results Portal</div>
-    <a href="admin.html" class="admin-btn">Admin</a>
+    <div class="brand">
+      <img src="images.jpg" class="logo" alt="logo">
+      <div>
+        <div class="college-name">Andhra Loyola Institute of Engineering and Technology</div>
+        <div class="subtext">Results Portal</div>
+      </div>
+    </div>
+    <div>
+      <!-- <button id="themeToggle" class="theme-toggle">🌓</button> -->
+      <a href="admin.html" class="admin-btn">Admin</a>
+    </div>
   </header>
 
-  <div class="news-bar"><span id="flashNews">Loading flash news...</span></div>
+  <div class="news-bar" id="flashNews">Loading latest updates...</div>
 
-  <main>
+  <main class="container">
+    <h1>Check Your Exam Results</h1>
     <div class="card">
-      <h2>Check Your Exam Results</h2>
-      <input id="htno" placeholder="Enter Roll Number (e.g., 22A91A05XX)">
-      <select id="type">
-        <option value="regular">Regular</option>
-        <option value="supply">Supplementary</option>
-      </select>
-      <select id="sem">
-        <option value="1">Semester 1</option>
-        <option value="2">Semester 2</option>
-        <option value="3">Semester 3</option>
-        <option value="4">Semester 4</option>
-        <option value="5">Semester 5</option>
-        <option value="6">Semester 6</option>
-        <option value="7">Semester 7</option>
-        <option value="8">Semester 8</option>
-      </select>
-      <button id="viewBtn">View Results</button>
-      <p id="msg"></p>
+      <label>Enter Roll Number</label>
+      <input id="htno" placeholder="e.g., 22A91A05XX" />
+
+      <div class="row">
+        <div class="col">
+          <label>Result Type</label>
+          <select id="resultType">
+            <option value="regular">Regular</option>
+            <option value="supplementary">Supplementary</option>
+            <option value="revaluation">Revaluation</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Semester</label>
+          <select id="semester">
+            <option value="1">Sem 1</option><option value="2">Sem 2</option>
+            <option value="3">Sem 3</option><option value="4">Sem 4</option>
+            <option value="5">Sem 5</option><option value="6">Sem 6</option>
+            <option value="7">Sem 7</option><option value="8">Sem 8</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="viewBtn" class="primary">View Results</button>
+      <p id="msg" class="msg"></p>
     </div>
 
-    <div id="resultContainer" class="results"></div>
+    <div id="resultSection" class="card hidden">
+      <h2>Result</h2>
+      <div id="resultContainer"></div>
+      <button id="printBtn" class="secondary">Print Result</button>
+    </div>
   </main>
 
-  <footer class="footer">© 2025 College Portal</footer>
-
+  <footer class="footer">&copy; 2025 Andhra Loyola Institute of Engineering and Technology</footer>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
