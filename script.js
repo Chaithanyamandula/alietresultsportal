@@ -1,4 +1,4 @@
-// ==== FIREBASE CONFIGURATION ====
+/* ---------- FIREBASE CONFIG ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyAa0lRVztX561W7aTtwi5CrSy_MLEa7Lp8",
   authDomain: "college-results-portal.firebaseapp.com",
@@ -8,62 +8,158 @@ const firebaseConfig = {
   messagingSenderId: "178855254203",
   appId: "1:178855254203:web:4401f8bfd4bcafbd47719e"
 };
+
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ==== STUDENT PAGE FUNCTIONALITY ====
-if (document.getElementById("flashNews")) {
-  const flashRef = db.ref("flashNews");
-  flashRef.on("value", snap => {
-    const news = snap.val() || "Welcome to College Results Portal!";
-    document.getElementById("flashNews").innerHTML = `<span>${news}</span>`;
-  });
+/* ---------- GLOBALS ---------- */
+let globalData = {
+  flashNews: "",
+  admin: { username: "admin", password: "admin123" },
+  sheets: {
+    regular: ["", "", "", "", "", "", "", ""],
+    supplementary: ["", "", "", "", "", "", "", ""],
+    revaluation: ["", "", "", "", "", "", "", ""]
+  }
+};
 
-  document.getElementById("viewBtn").onclick = async () => {
-    const htno = document.getElementById("htno").value.trim();
-    const type = document.getElementById("type").value;
-    const sem = document.getElementById("sem").value;
-    const msg = document.getElementById("msg");
-    if (!htno) { msg.textContent = "Please enter Hall Ticket Number"; return; }
+/* ---------- THEME ---------- */
+function applyTheme(theme) {
+  document.body.classList.remove('light', 'dark');
+  document.body.classList.add(theme);
+  localStorage.setItem('theme', theme);
+}
+function toggleTheme() {
+  const t = localStorage.getItem('theme') || 'light';
+  applyTheme(t === 'light' ? 'dark' : 'light');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  applyTheme(localStorage.getItem('theme') || 'light');
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.onclick = toggleTheme;
+});
 
-    const sheetRef = db.ref(`links/${type}/sem${sem}`);
-    const sheetURL = await sheetRef.get().then(s => s.val());
+/* ---------- LOAD LIVE DATA FROM FIREBASE ---------- */
+async function loadData() {
+  const ref = db.ref('/');
+  const snap = await ref.get();
+  if (snap.exists()) globalData = snap.val();
 
-    if (!sheetURL) { msg.textContent = "Link not set by admin."; return; }
-
-    msg.textContent = "Fetching results...";
-    try {
-      const res = await fetch(sheetURL);
-      const text = await res.text();
-      const json = JSON.parse(text.match(/{.*}/s)[0]);
-      const rows = json.table.rows.map(r => r.c.map(c => c?.v || ""));
-      const match = rows.filter(r => r[0].toLowerCase() === htno.toLowerCase());
-      if (!match.length) msg.textContent = "No record found.";
-      else {
-        const table = `<table><tr><th>Htno</th><th>Subcode</th><th>Subname</th><th>Internals</th><th>Grade</th><th>Credits</th></tr>` +
-          match.map(r => `<tr>${r.slice(0,6).map(c => `<td>${c}</td>`).join('')}</tr>`).join('') + `</table>`;
-        document.getElementById("resultContainer").innerHTML = table;
-        msg.textContent = "";
-      }
-    } catch (e) { msg.textContent = "Error fetching sheet."; console.error(e); }
-  };
+  const news = document.getElementById("flashNews");
+  if (news) news.innerHTML = `<span>${globalData.flashNews || "Welcome to Results Portal"}</span>`;
 }
 
-// ==== ADMIN PAGE FUNCTIONALITY ====
-if (document.getElementById("saveFlashBtn")) {
-  document.getElementById("saveFlashBtn").onclick = () => {
-    const news = document.getElementById("flashNewsInput").value.trim();
-    if (!news) return alert("Enter flash news text.");
-    db.ref("flashNews").set(news);
-    alert("Flash news updated successfully!");
+/* ---------- REALTIME FLASH NEWS UPDATE ---------- */
+if (document.getElementById("flashNews")) {
+  const flashRef = db.ref('flashNews');
+  flashRef.on('value', (snap) => {
+    const val = snap.val() || "Welcome to Results Portal";
+    document.getElementById("flashNews").innerHTML = `<span>${val}</span>`;
+  });
+}
+
+/* ---------- PARSE GVIZ ---------- */
+function parseGviz(txt) {
+  const s = txt.indexOf("{"), e = txt.lastIndexOf("}");
+  return JSON.parse(txt.slice(s, e + 1));
+}
+
+/* ---------- FETCH RESULTS ---------- */
+async function fetchResults(url) {
+  const res = await fetch(url);
+  const txt = await res.text();
+  return parseGviz(txt).table.rows.map(r => r.c.map(c => (c && c.v) || ""));
+}
+
+/* ---------- RENDER RESULTS ---------- */
+function renderResults(rows, htno) {
+  const f = rows.filter(r => r[0].toString().toLowerCase() === htno.toLowerCase());
+  if (!f.length) return `<p>No records found.</p>`;
+  return `<table><thead><tr><th>Htno</th><th>Subcode</th><th>Subname</th><th>Internals</th><th>Grade</th><th>Credits</th></tr></thead>
+  <tbody>${f.map(r => `<tr>${r.slice(0, 6).map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+/* ---------- INIT ---------- */
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadData();
+
+  // ======== STUDENT PAGE ========
+  const viewBtn = document.getElementById("viewBtn");
+  if (viewBtn) {
+    viewBtn.onclick = async () => {
+      const htno = document.getElementById("htno").value.trim();
+      const type = document.getElementById("resultType").value;
+      const sem = +document.getElementById("semester").value;
+      const msg = document.getElementById("msg");
+      msg.textContent = "Fetching...";
+
+      const url = globalData.sheets[type][sem - 1];
+      if (!url) return msg.textContent = "No link set for this semester.";
+
+      try {
+        const rows = await fetchResults(url);
+        document.getElementById("resultContainer").innerHTML = renderResults(rows, htno);
+        document.getElementById("resultSection").classList.remove("hidden");
+        msg.textContent = "";
+      } catch {
+        msg.textContent = "Error fetching results.";
+      }
+    };
+    document.getElementById("printBtn").onclick = () => window.print();
+  }
+
+  // ======== ADMIN PAGE ========
+  const loginBtn = document.getElementById("loginBtn");
+  if (loginBtn) {
+    loginBtn.onclick = async () => {
+      const u = document.getElementById("adminUser").value;
+      const p = document.getElementById("adminPass").value;
+      if (u === globalData.admin.username && p === globalData.admin.password) {
+        document.getElementById("loginCard").classList.add("hidden");
+        document.getElementById("adminPanel").classList.remove("hidden");
+        initAdmin();
+      } else {
+        document.getElementById("loginMsg").textContent = "Invalid credentials";
+      }
+    };
+  }
+});
+
+/* ---------- ADMIN PANEL ---------- */
+function initAdmin() {
+  document.getElementById("newsText").value = globalData.flashNews || "";
+  const linkInputs = document.getElementById("linkInputs");
+  linkInputs.innerHTML = "";
+
+  ['regular', 'supplementary', 'revaluation'].forEach(type => {
+    const h = document.createElement('h3');
+    h.textContent = type.toUpperCase();
+    linkInputs.appendChild(h);
+
+    globalData.sheets[type].forEach((link, i) => {
+      const inp = document.createElement('input');
+      inp.value = link;
+      inp.placeholder = `${type} Sem ${i + 1} JSON URL`;
+      inp.dataset.type = type;
+      inp.dataset.index = i;
+      linkInputs.appendChild(inp);
+    });
+  });
+
+  // --- Flash News Save ---
+  document.getElementById("saveNews").onclick = () => {
+    const val = document.getElementById("newsText").value.trim();
+    db.ref("flashNews").set(val);
+    alert("✅ Flash news updated globally!");
   };
 
-  document.getElementById("saveLinkBtn").onclick = () => {
-    const type = document.getElementById("typeSelect").value;
-    const sem = document.getElementById("semSelect").value;
-    const link = document.getElementById("sheetLink").value.trim();
-    if (!link) return alert("Paste valid Google Sheet JSON link!");
-    db.ref(`links/${type}/sem${sem}`).set(link);
-    alert(`Link saved for ${type} Sem ${sem}`);
+  // --- Sheet Links Save ---
+  document.getElementById("saveLinks").onclick = async () => {
+    linkInputs.querySelectorAll("input").forEach(inp => {
+      globalData.sheets[inp.dataset.type][inp.dataset.index] = inp.value.trim();
+    });
+    await db.ref("sheets").set(globalData.sheets);
+    alert("✅ Google Sheet links updated globally!");
   };
 }
