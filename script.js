@@ -8,13 +8,14 @@ const firebaseConfig = {
   messagingSenderId: "178855254203",
   appId: "1:178855254203:web:4401f8bfd4bcafbd47719e"
 };
+
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* ---------- GLOBAL VARIABLES ---------- */
+/* ---------- GLOBAL STRUCTURE ---------- */
 let globalData = {
-  flashNews: "",
+  flashNews: "Welcome to Results Portal",
   admin: { username: "admin", password: "admin123" },
   sheets: {
     regular: ["", "", "", "", "", "", "", ""],
@@ -23,61 +24,71 @@ let globalData = {
   }
 };
 
-/* ---------- LOAD DATA FROM FIREBASE ---------- */
+/* ---------- SYNC DATA FROM FIREBASE ---------- */
 async function loadData() {
-  const snapshot = await db.ref("/").get();
-  if (snapshot.exists()) globalData = snapshot.val();
-
-  // Update flash news on index page
-  const flashNews = document.getElementById("flashNews");
-  if (flashNews) {
-    flashNews.innerHTML = `<span>${globalData.flashNews || "Welcome to Results Portal"}</span>`;
+  const snap = await db.ref("/").get();
+  if (snap.exists()) {
+    globalData = { ...globalData, ...snap.val() };
+  } else {
+    // If first-time use, upload default data
+    await db.ref("/").set(globalData);
   }
+
+  // Update Flash News in UI
+  const news = document.getElementById("flashNews");
+  if (news) news.innerHTML = `<span>${globalData.flashNews}</span>`;
 }
 
-/* ---------- REALTIME FLASH NEWS UPDATES ---------- */
+/* ---------- REALTIME FLASH NEWS ---------- */
 if (document.getElementById("flashNews")) {
   const flashRef = db.ref("flashNews");
   flashRef.on("value", (snap) => {
-    const val = snap.val() || "Welcome to Results Portal";
-    document.getElementById("flashNews").innerHTML = `<span>${val}</span>`;
+    const text = snap.val() || "Welcome to Results Portal";
+    document.getElementById("flashNews").innerHTML = `<span>${text}</span>`;
   });
 }
 
-/* ---------- PARSE GOOGLE SHEETS JSON ---------- */
+/* ---------- PARSE GOOGLE SHEET JSON ---------- */
 function parseGviz(txt) {
-  const s = txt.indexOf("{"), e = txt.lastIndexOf("}");
+  const s = txt.indexOf("{"),
+    e = txt.lastIndexOf("}");
   return JSON.parse(txt.slice(s, e + 1));
 }
 
-/* ---------- FETCH RESULTS FROM GOOGLE SHEET ---------- */
+/* ---------- FETCH RESULTS FROM SHEET ---------- */
 async function fetchResults(url) {
   const res = await fetch(url);
   const txt = await res.text();
-  return parseGviz(txt).table.rows.map(r => r.c.map(c => (c && c.v) || ""));
+  return parseGviz(txt).table.rows.map((r) => r.c.map((c) => (c && c.v) || ""));
 }
 
-/* ---------- RENDER RESULTS IN TABLE ---------- */
+/* ---------- RENDER RESULTS ---------- */
 function renderResults(rows, htno) {
-  const filtered = rows.filter(r => r[0].toString().toLowerCase() === htno.toLowerCase());
-  if (!filtered.length) return `<p>No records found.</p>`;
-
+  const match = rows.filter(
+    (r) => r[0].toString().toLowerCase() === htno.toLowerCase()
+  );
+  if (!match.length) return `<p>No records found.</p>`;
   return `<table>
-    <thead>
-      <tr>
-        <th>Htno</th><th>Subcode</th><th>Subname</th><th>Internals</th><th>Grade</th><th>Credits</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${filtered.map(r => `<tr>${r.slice(0,6).map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}
-    </tbody>
+    <thead><tr>
+      <th>Htno</th><th>Subcode</th><th>Subname</th><th>Internals</th><th>Grade</th><th>Credits</th>
+    </tr></thead>
+    <tbody>${match
+      .map(
+        (r) =>
+          `<tr>${r
+            .slice(0, 6)
+            .map((c) => `<td>${c}</td>`)
+            .join("")}</tr>`
+      )
+      .join("")}</tbody>
   </table>`;
 }
 
-/* ---------- STUDENT PORTAL LOGIC ---------- */
+/* ---------- MAIN INITIALIZATION ---------- */
 document.addEventListener("DOMContentLoaded", async () => {
   await loadData();
 
+  // ==== STUDENT PAGE ====
   const viewBtn = document.getElementById("viewBtn");
   if (viewBtn) {
     viewBtn.onclick = async () => {
@@ -86,58 +97,63 @@ document.addEventListener("DOMContentLoaded", async () => {
       const sem = +document.getElementById("semester").value;
       const msg = document.getElementById("msg");
 
-      if (!htno) return (msg.textContent = "Enter valid Hall Ticket Number.");
+      if (!htno) return (msg.textContent = "Enter Hall Ticket Number");
 
       msg.textContent = "Fetching results...";
-
       const url = globalData.sheets[type][sem - 1];
-      if (!url) return (msg.textContent = "Result link not set by admin.");
+      if (!url) return (msg.textContent = "Link not set by admin.");
 
       try {
         const rows = await fetchResults(url);
-        document.getElementById("resultContainer").innerHTML = renderResults(rows, htno);
+        document.getElementById("resultContainer").innerHTML = renderResults(
+          rows,
+          htno
+        );
         document.getElementById("resultSection").classList.remove("hidden");
         msg.textContent = "";
-      } catch (e) {
-        msg.textContent = "Error fetching data. Check link or sheet access.";
-        console.error(e);
+      } catch (err) {
+        msg.textContent = "Error loading results. Check sheet access.";
       }
     };
-
-    const printBtn = document.getElementById("printBtn");
-    if (printBtn) printBtn.onclick = () => window.print();
   }
 
-  /* ---------- ADMIN LOGIN LOGIC ---------- */
+  // ==== ADMIN LOGIN ====
   const loginBtn = document.getElementById("loginBtn");
   if (loginBtn) {
-    loginBtn.onclick = () => {
+    loginBtn.onclick = async () => {
       const u = document.getElementById("adminUser").value.trim();
       const p = document.getElementById("adminPass").value.trim();
-      if (u === globalData.admin.username && p === globalData.admin.password) {
+
+      const adminSnap = await db.ref("admin").get();
+      const adminData = adminSnap.exists()
+        ? adminSnap.val()
+        : globalData.admin;
+
+      if (u === adminData.username && p === adminData.password) {
         document.getElementById("loginCard").classList.add("hidden");
         document.getElementById("adminPanel").classList.remove("hidden");
         initAdmin();
       } else {
-        document.getElementById("loginMsg").textContent = "Invalid credentials";
+        document.getElementById("loginMsg").textContent =
+          "❌ Invalid credentials";
       }
     };
   }
 });
 
-/* ---------- ADMIN PANEL LOGIC ---------- */
+/* ---------- ADMIN PANEL ---------- */
 function initAdmin() {
   document.getElementById("newsText").value = globalData.flashNews || "";
   const linkInputs = document.getElementById("linkInputs");
   linkInputs.innerHTML = "";
 
-  ['regular', 'supplementary', 'revaluation'].forEach(type => {
-    const h = document.createElement('h3');
+  ["regular", "supplementary", "revaluation"].forEach((type) => {
+    const h = document.createElement("h3");
     h.textContent = type.toUpperCase();
     linkInputs.appendChild(h);
 
     globalData.sheets[type].forEach((link, i) => {
-      const inp = document.createElement('input');
+      const inp = document.createElement("input");
       inp.value = link;
       inp.placeholder = `${type} Sem ${i + 1} JSON URL`;
       inp.dataset.type = type;
@@ -146,19 +162,22 @@ function initAdmin() {
     });
   });
 
-  // Save Flash News
+  // Update Flash News
   document.getElementById("saveNews").onclick = () => {
     const val = document.getElementById("newsText").value.trim();
     db.ref("flashNews").set(val);
-    alert("✅ Flash news updated globally!");
+    alert("✅ Flash News updated globally!");
   };
 
-  // Save All Google Sheet Links
+  // Update Links
   document.getElementById("saveLinks").onclick = async () => {
-    linkInputs.querySelectorAll("input").forEach(inp => {
-      globalData.sheets[inp.dataset.type][inp.dataset.index] = inp.value.trim();
+    linkInputs.querySelectorAll("input").forEach((inp) => {
+      globalData.sheets[inp.dataset.type][inp.dataset.index] =
+        inp.value.trim();
     });
     await db.ref("sheets").set(globalData.sheets);
-    alert("✅ All sheet links saved globally!");
+    alert("✅ Sheet links saved globally!");
   };
+
+  // Update Admin Password (optional future feature)
 }
