@@ -8,12 +8,11 @@ const firebaseConfig = {
   messagingSenderId: "178855254203",
   appId: "1:178855254203:web:4401f8bfd4bcafbd47719e"
 };
-
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* ---------- GLOBALS ---------- */
+/* ---------- GLOBAL VARIABLES ---------- */
 let globalData = {
   flashNews: "",
   admin: { username: "admin", password: "admin123" },
@@ -24,67 +23,61 @@ let globalData = {
   }
 };
 
-/* ---------- THEME ---------- */
-function applyTheme(theme) {
-  document.body.classList.remove('light', 'dark');
-  document.body.classList.add(theme);
-  localStorage.setItem('theme', theme);
-}
-function toggleTheme() {
-  const t = localStorage.getItem('theme') || 'light';
-  applyTheme(t === 'light' ? 'dark' : 'light');
-}
-document.addEventListener('DOMContentLoaded', () => {
-  applyTheme(localStorage.getItem('theme') || 'light');
-  const btn = document.getElementById('themeToggle');
-  if (btn) btn.onclick = toggleTheme;
-});
-
-/* ---------- LOAD LIVE DATA FROM FIREBASE ---------- */
+/* ---------- LOAD DATA FROM FIREBASE ---------- */
 async function loadData() {
-  const ref = db.ref('/');
-  const snap = await ref.get();
-  if (snap.exists()) globalData = snap.val();
+  const snapshot = await db.ref("/").get();
+  if (snapshot.exists()) globalData = snapshot.val();
 
-  const news = document.getElementById("flashNews");
-  if (news) news.innerHTML = `<span>${globalData.flashNews || "Welcome to Results Portal"}</span>`;
+  // Update flash news on index page
+  const flashNews = document.getElementById("flashNews");
+  if (flashNews) {
+    flashNews.innerHTML = `<span>${globalData.flashNews || "Welcome to Results Portal"}</span>`;
+  }
 }
 
-/* ---------- REALTIME FLASH NEWS UPDATE ---------- */
+/* ---------- REALTIME FLASH NEWS UPDATES ---------- */
 if (document.getElementById("flashNews")) {
-  const flashRef = db.ref('flashNews');
-  flashRef.on('value', (snap) => {
+  const flashRef = db.ref("flashNews");
+  flashRef.on("value", (snap) => {
     const val = snap.val() || "Welcome to Results Portal";
     document.getElementById("flashNews").innerHTML = `<span>${val}</span>`;
   });
 }
 
-/* ---------- PARSE GVIZ ---------- */
+/* ---------- PARSE GOOGLE SHEETS JSON ---------- */
 function parseGviz(txt) {
   const s = txt.indexOf("{"), e = txt.lastIndexOf("}");
   return JSON.parse(txt.slice(s, e + 1));
 }
 
-/* ---------- FETCH RESULTS ---------- */
+/* ---------- FETCH RESULTS FROM GOOGLE SHEET ---------- */
 async function fetchResults(url) {
   const res = await fetch(url);
   const txt = await res.text();
   return parseGviz(txt).table.rows.map(r => r.c.map(c => (c && c.v) || ""));
 }
 
-/* ---------- RENDER RESULTS ---------- */
+/* ---------- RENDER RESULTS IN TABLE ---------- */
 function renderResults(rows, htno) {
-  const f = rows.filter(r => r[0].toString().toLowerCase() === htno.toLowerCase());
-  if (!f.length) return `<p>No records found.</p>`;
-  return `<table><thead><tr><th>Htno</th><th>Subcode</th><th>Subname</th><th>Internals</th><th>Grade</th><th>Credits</th></tr></thead>
-  <tbody>${f.map(r => `<tr>${r.slice(0, 6).map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const filtered = rows.filter(r => r[0].toString().toLowerCase() === htno.toLowerCase());
+  if (!filtered.length) return `<p>No records found.</p>`;
+
+  return `<table>
+    <thead>
+      <tr>
+        <th>Htno</th><th>Subcode</th><th>Subname</th><th>Internals</th><th>Grade</th><th>Credits</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${filtered.map(r => `<tr>${r.slice(0,6).map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}
+    </tbody>
+  </table>`;
 }
 
-/* ---------- INIT ---------- */
-document.addEventListener('DOMContentLoaded', async () => {
+/* ---------- STUDENT PORTAL LOGIC ---------- */
+document.addEventListener("DOMContentLoaded", async () => {
   await loadData();
 
-  // ======== STUDENT PAGE ========
   const viewBtn = document.getElementById("viewBtn");
   if (viewBtn) {
     viewBtn.onclick = async () => {
@@ -92,29 +85,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       const type = document.getElementById("resultType").value;
       const sem = +document.getElementById("semester").value;
       const msg = document.getElementById("msg");
-      msg.textContent = "Fetching...";
+
+      if (!htno) return (msg.textContent = "Enter valid Hall Ticket Number.");
+
+      msg.textContent = "Fetching results...";
 
       const url = globalData.sheets[type][sem - 1];
-      if (!url) return msg.textContent = "No link set for this semester.";
+      if (!url) return (msg.textContent = "Result link not set by admin.");
 
       try {
         const rows = await fetchResults(url);
         document.getElementById("resultContainer").innerHTML = renderResults(rows, htno);
         document.getElementById("resultSection").classList.remove("hidden");
         msg.textContent = "";
-      } catch {
-        msg.textContent = "Error fetching results.";
+      } catch (e) {
+        msg.textContent = "Error fetching data. Check link or sheet access.";
+        console.error(e);
       }
     };
-    document.getElementById("printBtn").onclick = () => window.print();
+
+    const printBtn = document.getElementById("printBtn");
+    if (printBtn) printBtn.onclick = () => window.print();
   }
 
-  // ======== ADMIN PAGE ========
+  /* ---------- ADMIN LOGIN LOGIC ---------- */
   const loginBtn = document.getElementById("loginBtn");
   if (loginBtn) {
-    loginBtn.onclick = async () => {
-      const u = document.getElementById("adminUser").value;
-      const p = document.getElementById("adminPass").value;
+    loginBtn.onclick = () => {
+      const u = document.getElementById("adminUser").value.trim();
+      const p = document.getElementById("adminPass").value.trim();
       if (u === globalData.admin.username && p === globalData.admin.password) {
         document.getElementById("loginCard").classList.add("hidden");
         document.getElementById("adminPanel").classList.remove("hidden");
@@ -126,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-/* ---------- ADMIN PANEL ---------- */
+/* ---------- ADMIN PANEL LOGIC ---------- */
 function initAdmin() {
   document.getElementById("newsText").value = globalData.flashNews || "";
   const linkInputs = document.getElementById("linkInputs");
@@ -147,19 +146,19 @@ function initAdmin() {
     });
   });
 
-  // --- Flash News Save ---
+  // Save Flash News
   document.getElementById("saveNews").onclick = () => {
     const val = document.getElementById("newsText").value.trim();
     db.ref("flashNews").set(val);
     alert("✅ Flash news updated globally!");
   };
 
-  // --- Sheet Links Save ---
+  // Save All Google Sheet Links
   document.getElementById("saveLinks").onclick = async () => {
     linkInputs.querySelectorAll("input").forEach(inp => {
       globalData.sheets[inp.dataset.type][inp.dataset.index] = inp.value.trim();
     });
     await db.ref("sheets").set(globalData.sheets);
-    alert("✅ Google Sheet links updated globally!");
+    alert("✅ All sheet links saved globally!");
   };
 }
